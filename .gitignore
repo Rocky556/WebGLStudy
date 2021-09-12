@@ -1,0 +1,10 @@
+.DS_Store
+/glsl学习/书籍/
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
