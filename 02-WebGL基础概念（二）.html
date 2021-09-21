@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    /* 移除边界 */
+    body {
+      border: 0;
+      background-color: white;
+    }
+
+    /* 设置欢度大小为视域大小 */
+    canvas {
+      width: 98vw;
+      height: 97vh;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="c"></canvas>
+
+
+  <script id="vertex-shader-2d" type="notjs">
+    attribute vec2 a_position;
+    
+    uniform vec2 u_resolution;
+    
+    void main() {
+      // 从像素坐标转换到 0.0 到 1.0
+      vec2 zeroToOne = a_position / u_resolution;
+ 
+      // 再把 0->1 转换 0->2
+      vec2 zeroToTwo = zeroToOne * 2.0;
+ 
+      // 把 0->2 转换到 -1->+1 (裁剪空间)
+      vec2 clipSpace = zeroToTwo - 1.0;
+ 
+      gl_Position = vec4(clipSpace, 0, 1);
+    }
+  </script>
+
+  <script id="fragment-shader-2d" type="notjs">
+
+    // 片断着色器没有默认精度，所以我们需要设置一个精度
+    // mediump是一个不错的默认值，代表“medium precision”（中等精度）
+    precision mediump float;
+    
+    void main() {
+    // gl_FragColor是一个片断着色器主要设置的变量
+    gl_FragColor = vec4(1, 0, 0.5, 1); // 返回“瑞迪施紫色”
+  }
+  </script>
+
+  <script>
+    var canvas = document.querySelector('#c');
+
+    var gl = canvas.getContext("webgl");
+    if (!gl) {
+      alert('你不能使用WebGL!');
+    }
+
+    // 创建着色器方法，输入参数：渲染上下文，着色器类型，数据源
+    function createShader(gl, type, source) {
+      var shader = gl.createShader(type); // 创建着色器对象
+      gl.shaderSource(shader, source); // 提供数据源
+      gl.compileShader(shader); // 编译 -> 生成着色器
+      var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+      if (success) {
+        return shader;
+      }
+
+      console.log(gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+    }
+
+    var vertexShaderSource = document.querySelector("#vertex-shader-2d").text;
+    var fragmentShaderSource = document.querySelector("#fragment-shader-2d").text;
+
+    var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource); // 顶点着色器
+    var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource); // 片元着色器
+
+    // 创建并将着色器link至Program
+    function createProgram(gl, vertexShader, fragmentShader) {
+      var program = gl.createProgram(); // 创建并初始化一个Program
+      // 把shader添加到Program中
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program); // 链接给定的Program，从而完成为Program的shader准备GPU代码的过程
+      var success = gl.getProgramParameter(program, gl.LINK_STATUS);
+      if (success) {
+        return program;
+      }
+
+      console.log(gl.getProgramInfoLog(program));
+      gl.deleteProgram(program);
+    }
+
+    var program = createProgram(gl, vertexShader, fragmentShader);
+
+    var positionAttributeLocation = gl.getAttribLocation(program, "a_position"); // getAttribLocation:返回属性的下标指向位置
+
+
+    var resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+
+    var positionBuffer = gl.createBuffer(); // 创建并初始化一个用于储存顶点数据或着色数据buffer
+
+    // ARRAY_BUFFER: 包含顶点属性的Buffer，如顶点坐标，纹理坐标数据或顶点颜色数据
+    // 将创建的buffer绑定到缓存对象中(激活缓存对象)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    // 三个二维点坐标
+    var positions = [
+      10, 20,
+      80, 20,
+      10, 30,
+      10, 30,
+      80, 20,
+      80, 30,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+
+
+    // 重置画布尺寸
+    function resize(canvas) {
+      // 获取浏览器中画布的显示尺寸
+      var displayWidth = canvas.clientWidth;
+      var displayHeight = canvas.clientHeight;
+
+      // 检尺寸是否相同
+      if (canvas.width != displayWidth ||
+        canvas.height != displayHeight) {
+
+        // 设置为相同的尺寸
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+      }
+    }
+    resize(gl.canvas);
+
+
+
+    // 设置视域: 指定从标准设备到窗口坐标的x、y仿射变换
+    // WebGLRenderingContext.viewport(x,y,width,height);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    // 清空画布
+    gl.clearColor(0, 0, 0, 0); // 设置用于清空的颜色
+
+    // gl.clear()把指定的缓冲区清空为预设的值
+    // gl.COLOR_BUFFER_BIT   颜色缓冲区
+    // gl.DEPTH_BUFFER_BIT   深度缓冲区
+    // gl.STENCIL_BUFFER_BIT  模板缓冲区
+    // 注意，clear()方法可以接受复合值: gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // 告诉它用我们之前写好的着色程序（一个着色器对）
+    gl.useProgram(program);
+
+    gl.enableVertexAttribArray(positionAttributeLocation);
+
+
+    // 激活特定的属性，不被激活的属性不能使用
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    // 告诉属性怎么从positionBuffer中读取数据 (ARRAY_BUFFER)
+    var size = 2;          // 每次迭代运行提取两个单位数据
+    var type = gl.FLOAT;   // 每个单位的数据类型是32位浮点型
+    var normalize = false; // 不需要归一化数据
+    var stride = 0;        // 0 = 移动单位数量 * 每个单位占用内存（sizeof(type)）
+    // 每次迭代运行运动多少内存到下一个数据开始点
+    var offset = 0;        // 从缓冲起始位置开始读取
+
+    // 指定渲染时索引值为index的顶点属性数据的数据格式和位置
+    // params: ( 要修改的顶点属性的索引值,
+    // 指定每个顶点属性的组件数量:例如position是3个 (x,y,z), color是4个 (r,g,b,a)
+    // 指定每个组件的数据类型
+    // 指定当被访问时，固定点数据值是否应该被归一化（GL_TRUE）或者直接转换为固定点值（GL_FALSE）
+    // 指定连续顶点属性之间的偏移量。如果为0，那么顶点属性会被理解为：它们是紧密排列在一起的。
+    // 指定第一个组件在数组的第一个顶点属性中的偏移量
+    gl.vertexAttribPointer(
+      positionAttributeLocation, size, type, normalize, stride, offset);
+    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);    // 将绑定点绑定到缓冲数据（positionBuffer）
+
+    // draw
+    var primitiveType = gl.TRIANGLES;
+    var offset = 0;
+    var count = 6;
+    gl.drawArrays(primitiveType, offset, count);
+  </script>
+
+
+</body>
+
+</html>
