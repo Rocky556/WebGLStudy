@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="node_modules/systemjs/dist/system.js"></script>
+  <script src="node_modules/typescript/lib/typescript.js"></script>
+  <script>
+    System.config({
+      transpiler: 'typescript',//要使用TS编译器
+      packages: {
+        './': { defaultExtension: 'ts' } //转译package.json同一目录下的所有ts文件
+      }
+    });
+    System.import('main.ts') // 要导入的ts入口文件名
+      .then(null, console.error.bind(console)) //如果发生错误，将错误发送到浏览器控制台窗口
+      
+  </script>
+
+</head>
+
+<body>
+
+</body>
+
+</html>
